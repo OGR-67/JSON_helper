@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSON Transformer</title>
+    <style>
+      :root {
+        --primary-color: #3498db;
+        --secondary-color: #2980b9;
+        --background: #f5f7fa;
+        --panel-bg: #ffffff;
+        --border: #e0e2e4;
+        --text: #333;
+        --error: #e74c3c;
+        --success: #2ecc71;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: var(--background);
+        color: var(--text);
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      h1 {
+        color: var(--primary-color);
+        margin-bottom: 5px;
+      }
+
+      .description {
+        color: #666;
+        max-width: 700px;
+        margin: 0 auto 20px auto;
+      }
+
+      .panels {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      @media (min-width: 768px) {
+        .panels {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      .panel {
+        background-color: var(--panel-bg);
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .panel-header {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 15px;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .panel-body {
+        padding: 0;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .editor {
+        width: 100%;
+        height: 300px;
+        border: none;
+        padding: 15px;
+        resize: none;
+        font-family: "Consolas", "Monaco", monospace;
+        font-size: 14px;
+        overflow: auto;
+        flex-grow: 1;
+        box-sizing: border-box;
+        border-top: 1px solid var(--border);
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+      }
+
+      .toolbar {
+        padding: 10px 15px;
+        background-color: #f9f9f9;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .btn {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+      }
+
+      .btn:hover {
+        background-color: var(--secondary-color);
+      }
+
+      .btn-copy {
+        background-color: #7f8c8d;
+      }
+
+      .btn-copy:hover {
+        background-color: #6c7a7d;
+      }
+
+      .status {
+        padding: 5px 10px;
+        font-size: 12px;
+        display: none;
+      }
+
+      .status.error {
+        display: block;
+        color: var(--error);
+      }
+
+      .status.success {
+        display: block;
+        color: var(--success);
+      }
+
+      .copy-feedback {
+        font-size: 12px;
+        margin-left: 10px;
+        color: var(--success);
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .copy-feedback.show {
+        opacity: 1;
+      }
+
+      .options {
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+
+      .option-group {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>JSON Transformer</h1>
+        <p class="description">
+          Manipulez facilement vos JSON pour Business Central en passant
+          d'objets JavaScript à JSON standard ou stringifié.
+        </p>
+      </header>
+
+      <div class="options">
+        <div class="option-group">
+          <input type="checkbox" id="auto-update" checked />
+          <label for="auto-update">Mise à jour automatique</label>
+        </div>
+      </div>
+
+      <div class="panels">
+        <div class="panel">
+          <div class="panel-header">
+            <span>Objet JavaScript</span>
+          </div>
+          <div class="panel-body">
+            <textarea
+              id="js-editor"
+              class="editor"
+              spellcheck="false"
+              placeholder="// Entrez votre objet JavaScript ici
+const monObjet = {
+    nom: 'Test',
+    valeur: 123,
+    items: ['a', 'b', 'c']
+};"
+            >
+const monObjet = {
+    nom: "Exemple",
+    valeur: 42,
+    estActif: true,
+    tags: ["business", "central", "api"],
+    infos: {
+        created: "2023-05-15",
+        version: 1.5
+    }
+};</textarea
+            >
+            <div class="toolbar">
+              <div>
+                <button id="js-update" class="btn">Mettre à jour</button>
+                <span id="js-status" class="status"></span>
+              </div>
+              <div>
+                <button id="js-copy" class="btn btn-copy">Copier</button>
+                <span id="js-copy-feedback" class="copy-feedback">Copié !</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span>JSON Standard</span>
+          </div>
+          <div class="panel-body">
+            <textarea
+              id="json-editor"
+              class="editor"
+              spellcheck="false"
+              placeholder="// JSON formaté standard"
+            ></textarea>
+            <div class="toolbar">
+              <div>
+                <button id="json-update" class="btn">Mettre à jour</button>
+                <span id="json-status" class="status"></span>
+              </div>
+              <div>
+                <button id="json-copy" class="btn btn-copy">Copier</button>
+                <span id="json-copy-feedback" class="copy-feedback"
+                  >Copié !</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span>JSON Stringifié</span>
+          </div>
+          <div class="panel-body">
+            <textarea
+              id="str-editor"
+              class="editor"
+              spellcheck="false"
+              placeholder="// JSON stringifié avec échappements"
+            ></textarea>
+            <div class="toolbar">
+              <div>
+                <button id="str-update" class="btn">Mettre à jour</button>
+                <span id="str-status" class="status"></span>
+              </div>
+              <div>
+                <button id="str-copy" class="btn btn-copy">Copier</button>
+                <span id="str-copy-feedback" class="copy-feedback"
+                  >Copié !</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Éléments DOM
+        const jsEditor = document.getElementById("js-editor");
+        const jsonEditor = document.getElementById("json-editor");
+        const strEditor = document.getElementById("str-editor");
+
+        const jsStatus = document.getElementById("js-status");
+        const jsonStatus = document.getElementById("json-status");
+        const strStatus = document.getElementById("str-status");
+
+        const jsUpdateBtn = document.getElementById("js-update");
+        const jsonUpdateBtn = document.getElementById("json-update");
+        const strUpdateBtn = document.getElementById("str-update");
+
+        const jsCopyBtn = document.getElementById("js-copy");
+        const jsonCopyBtn = document.getElementById("json-copy");
+        const strCopyBtn = document.getElementById("str-copy");
+
+        const jsCopyFeedback = document.getElementById("js-copy-feedback");
+        const jsonCopyFeedback = document.getElementById("json-copy-feedback");
+        const strCopyFeedback = document.getElementById("str-copy-feedback");
+
+        const autoUpdateCheckbox = document.getElementById("auto-update");
+
+        // Fonctions utilitaires
+        function updateStatus(element, message, isError = false) {
+          element.textContent = message;
+          element.className = "status";
+          if (isError) {
+            element.classList.add("error");
+          } else if (message) {
+            element.classList.add("success");
+          }
+
+          // Effacer après 3 secondes
+          setTimeout(() => {
+            element.textContent = "";
+            element.className = "status";
+          }, 3000);
+        }
+
+        function showCopyFeedback(element) {
+          element.classList.add("show");
+          setTimeout(() => {
+            element.classList.remove("show");
+          }, 2000);
+        }
+
+        // Fonction de conversion du JS vers JSON
+        function jsToJson() {
+          try {
+            const jsCode = jsEditor.value;
+
+            // On vérifie si le code contient une déclaration
+            const match = jsCode.match(/(?:const|let|var)\s+(\w+)\s*=\s*/);
+            if (match) {
+              // On extrait le nom de variable et on l'ajoute à une fonction eval sécurisée
+              const varName = match[1];
+              const jsObject = new Function(`
+                            ${jsCode}
+                            return ${varName};
+                        `)();
+
+              // Conversion en JSON formaté
+              const jsonFormatted = JSON.stringify(jsObject, null, 4);
+              jsonEditor.value = jsonFormatted;
+
+              // Conversion en JSON stringifié (compact, sans indentation ni retours à la ligne)
+              strEditor.value = JSON.stringify(JSON.stringify(jsObject));
+
+              updateStatus(jsStatus, "Conversion réussie", false);
+              return true;
+            } else {
+              // Si pas de déclaration, on essaie de parser en supposant que c'est un objet direct
+              const jsObject = new Function(`
+                            return ${jsCode};
+                        `)();
+
+              // Conversion en JSON formaté
+              const jsonFormatted = JSON.stringify(jsObject, null, 4);
+              jsonEditor.value = jsonFormatted;
+
+              // Conversion en JSON stringifié (compact)
+              strEditor.value = JSON.stringify(JSON.stringify(jsObject));
+
+              updateStatus(jsStatus, "Conversion réussie", false);
+              return true;
+            }
+          } catch (error) {
+            updateStatus(jsStatus, `Erreur: ${error.message}`, true);
+            return false;
+          }
+        }
+
+        // Fonction de conversion du JSON standard vers les autres formats
+        function jsonToOthers() {
+          try {
+            // Parse le JSON
+            const jsonObject = JSON.parse(jsonEditor.value);
+
+            // Génère le code JS
+            let jsCode =
+              "const data = " + JSON.stringify(jsonObject, null, 4) + ";";
+            // Remplace les quotes par des doubles quotes pour le style
+            jsCode = jsCode.replace(/"([^"]+)":/g, "$1:");
+            jsEditor.value = jsCode;
+
+            // Génère le JSON stringifié (compact)
+            strEditor.value = JSON.stringify(JSON.stringify(jsonObject));
+
+            updateStatus(jsonStatus, "Conversion réussie", false);
+            return true;
+          } catch (error) {
+            updateStatus(jsonStatus, `Erreur: ${error.message}`, true);
+            return false;
+          }
+        }
+
+        // Fonction de conversion du JSON stringifié vers les autres formats
+        function strToOthers() {
+          try {
+            // Parse la chaîne stringifiée pour obtenir le JSON
+            const jsonString = JSON.parse(strEditor.value);
+
+            try {
+              // Parse le JSON contenu dans la chaîne
+              const jsonObject = JSON.parse(jsonString);
+
+              // Mettre à jour l'éditeur JSON avec le format pretty
+              jsonEditor.value = JSON.stringify(jsonObject, null, 4);
+
+              // Génère le code JS
+              let jsCode =
+                "const data = " + JSON.stringify(jsonObject, null, 4) + ";";
+              // Remplace les quotes par des doubles quotes pour le style
+              jsCode = jsCode.replace(/"([^"]+)":/g, "$1:");
+              jsEditor.value = jsCode;
+
+              updateStatus(strStatus, "Conversion réussie", false);
+              return true;
+            } catch (jsonError) {
+              // Si le JSON est une simple chaîne et non un objet
+              jsonEditor.value = jsonString;
+              jsEditor.value = `const data = ${jsonString};`;
+
+              updateStatus(
+                strStatus,
+                "Conversion réussie (chaîne simple)",
+                false
+              );
+              return true;
+            }
+          } catch (error) {
+            updateStatus(strStatus, `Erreur: ${error.message}`, true);
+            return false;
+          }
+        }
+
+        // Fonctions de copie
+        function copyToClipboard(text, feedbackElement) {
+          navigator.clipboard
+            .writeText(text)
+            .then(() => {
+              showCopyFeedback(feedbackElement);
+            })
+            .catch((err) => {
+              console.error("Erreur lors de la copie :", err);
+            });
+        }
+
+        // Événements de mise à jour
+        jsUpdateBtn.addEventListener("click", jsToJson);
+        jsonUpdateBtn.addEventListener("click", jsonToOthers);
+        strUpdateBtn.addEventListener("click", strToOthers);
+
+        // Événements de copie
+        jsCopyBtn.addEventListener("click", () =>
+          copyToClipboard(jsEditor.value, jsCopyFeedback)
+        );
+        jsonCopyBtn.addEventListener("click", () =>
+          copyToClipboard(jsonEditor.value, jsonCopyFeedback)
+        );
+        strCopyBtn.addEventListener("click", () =>
+          copyToClipboard(strEditor.value, strCopyFeedback)
+        );
+
+        // Mise à jour automatique
+        let autoUpdateTimeout;
+
+        function setupAutoUpdate(editor, updateFn) {
+          editor.addEventListener("input", function () {
+            if (autoUpdateCheckbox.checked) {
+              clearTimeout(autoUpdateTimeout);
+              autoUpdateTimeout = setTimeout(() => {
+                updateFn();
+              }, 1000); // Délai de 1s pour éviter trop de mises à jour pendant la frappe
+            }
+          });
+        }
+
+        setupAutoUpdate(jsEditor, jsToJson);
+        setupAutoUpdate(jsonEditor, jsonToOthers);
+        setupAutoUpdate(strEditor, strToOthers);
+
+        // Initialiser l'application avec les données d'exemple
+        jsToJson();
+      });
+    </script>
+  </body>
+</html>
